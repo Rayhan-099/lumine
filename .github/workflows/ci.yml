@@ -1,0 +1,35 @@
+name: Lumine CI/CD
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Verify Frontend builds
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          
+      - name: Verify Backend installs
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
