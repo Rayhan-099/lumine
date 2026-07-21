@@ -13,7 +13,7 @@ const Comparison = () => {
     const fetchHistory = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://127.0.0.1:8000/history", {
+        const response = await fetch(`${process.env.REACT_APP_API_URL || "http://127.0.0.1:8000"}/history`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (response.ok) {
@@ -43,7 +43,7 @@ const Comparison = () => {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://127.0.0.1:8000/compare?id1=${selectedId1}&id2=${selectedId2}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://127.0.0.1:8000"}/compare?id1=${selectedId1}&id2=${selectedId2}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

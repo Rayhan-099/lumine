@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import AnalysisResult from "./AnalysisResult";
 import "./Diagnosis.css";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
 
 const Diagnosis = () => {
   const [image, setImage] = useState(null);

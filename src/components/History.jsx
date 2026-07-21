@@ -10,7 +10,7 @@ const History = () => {
     const fetchHistory = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://127.0.0.1:8000/history", {
+        const response = await fetch(`${process.env.REACT_APP_API_URL || "http://127.0.0.1:8000"}/history`, {
           headers: {
             "Authorization": `Bearer ${token}`
           }
@@ -35,7 +35,7 @@ const History = () => {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://127.0.0.1:8000/privacy/all", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://127.0.0.1:8000"}/privacy/all`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -52,7 +52,7 @@ const History = () => {
     
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://127.0.0.1:8000/privacy/${id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || "http://127.0.0.1:8000"}/privacy/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -97,7 +97,7 @@ const History = () => {
                     className="btn-outline btn-small"
                     onClick={() => {
                       const token = localStorage.getItem("token");
-                      fetch(`http://127.0.0.1:8000/history/reports/${analysis.id}/pdf`, {
+                      fetch(`${process.env.REACT_APP_API_URL || "http://127.0.0.1:8000"}/history/reports/${analysis.id}/pdf`, {
                         headers: { Authorization: `Bearer ${token}` }
                       })
                       .then(response => response.blob())
