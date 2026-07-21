@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Viani Skin Problem Detection Tool</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: "Poppins", sans-serif;
+      background: #f3f6fa;
+      color: #222;
+      text-align: center;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #1a73e8;
+      font-size: 30px;
+      margin-bottom: 5px;
+    }
+
+    p {
+      color: #555;
+      font-size: 16px;
+    }
+
+    form {
+      background: #fff;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      display: inline-block;
+      width: 100%;
+      max-width: 500px;
+      margin-top: 20px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 15px;
+      margin-bottom: 12px;
+      resize: none;
+    }
+
+    input[type="file"] {
+      margin-bottom: 15px;
+    }
+
+    button {
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 25px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #155ec2;
+      transform: scale(1.05);
+    }
+
+    #result {
+      margin-top: 25px;
+      text-align: left;
+      display: inline-block;
+      background: #fff;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 500px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* --- Loader Animation --- */
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #1a73e8;
+      border-radius: 50%;
+      width: 35px;
+      height: 35px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      margin-top: 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: #1a73e8;
+      font-weight: 500;
+      margin-top: 10px;
+    }
+
+    #downloadBtn {
+      display: none;
+      margin-top: 15px;
+      background: #4caf50;
+    }
+
+    #downloadBtn:hover {
+      background: #43a047;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧴 Viani Skin Problem Detection Tool</h1>
+  <p>Describe your skin problem and optionally upload an image.</p>
+
+  <form id="analyzeForm">
+    <textarea name="description" placeholder="Type your skin issue here..." required></textarea><br>
+    <input type="file" name="image" accept="image/*"><br>
+    <button type="submit">Analyze</button>
+  </form>
+
+  <div id="result"></div>
+  <button id="downloadBtn">📄 Download Report</button>
+
+  <script>
+    const form = document.getElementById("analyzeForm");
+    const resultDiv = document.getElementById("result");
+    const downloadBtn = document.getElementById("downloadBtn");
+    let latestData = null;
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      resultDiv.innerHTML = `
+        <div class="loader"></div>
+        <div class="loading-text">Analyzing... please wait ⏳</div>
+      `;
+      downloadBtn.style.display = "none";
+
+      try {
+        const response = await fetch("/analyze/", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          resultDiv.innerHTML = `<p style="color:red;">Error: ${response.statusText}</p>`;
+          return;
+        }
+
+        const data = await response.json();
+        latestData = data;
+        let html = `<h3>🧠 Analysis Result</h3>`;
+
+        if (data.text_analysis) {
+          html += `<b>Possible Condition:</b> ${data.text_analysis.possible_condition}<br>`;
+          html += `<b>Causes:</b> ${data.text_analysis.causes}<br>`;
+          html += `<b>Suggestion:</b> ${data.text_analysis.suggestion}<br>`;
+
+          if (data.text_analysis.seriousness_level) {
+            let color = "gray";
+            const level = data.text_analysis.seriousness_level.toLowerCase();
+            if (level === "low") color = "green";
+            else if (level === "medium") color = "orange";
+            else color = "red";
+            html += `<b>Seriousness Level:</b> <span style="color:${color}; font-weight:bold;">${level}</span><br><br>`;
+          }
+        }
+
+        if (data.image_analysis && data.image_analysis.predicted_condition) {
+          html += `<b>Image Prediction:</b> ${data.image_analysis.predicted_condition}<br>`;
+          if (data.image_analysis.confidence) {
+            html += `<b>Confidence:</b> ${data.image_analysis.confidence}%<br><br>`;
+          }
+        }
+
+        if (data.recommendation) {
+          html += `<b>Recommendation:</b> ${data.recommendation}`;
+        }
+
+        resultDiv.innerHTML = html;
+        downloadBtn.style.display = "inline-block";
+      } catch (error) {
+        resultDiv.innerHTML = `<p style="color:red;">Error while analyzing: ${error}</p>`;
+      }
+    });
+
+    // --- PDF Download ---
+    downloadBtn.addEventListener("click", () => {
+      if (!latestData) return alert("Please analyze first!");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(18);
+      doc.text("Viani Skin Problem Detection Report", 20, 20);
+      doc.setFontSize(12);
+      doc.text(`Date: ${new Date().toLocaleString()}`, 20, 30);
+
+      let y = 45;
+
+      doc.setFontSize(14);
+      doc.text("🧠 Text Analysis", 20, y);
+      y += 10;
+
+      if (latestData.text_analysis) {
+        const t = latestData.text_analysis;
+        doc.text(`Condition: ${t.possible_condition}`, 20, y); y += 8;
+        doc.text(`Causes: ${t.causes}`, 20, y); y += 8;
+        doc.text(`Suggestion: ${t.suggestion}`, 20, y); y += 8;
+        doc.text(`Seriousness: ${t.seriousness_level}`, 20, y); y += 12;
+      }
+
+      if (latestData.image_analysis && latestData.image_analysis.predicted_condition) {
+        doc.setFontSize(14);
+        doc.text("🖼 Image Analysis", 20, y);
+        y += 10;
+        const i = latestData.image_analysis;
+        doc.text(`Prediction: ${i.predicted_condition}`, 20, y); y += 8;
+        doc.text(`Confidence: ${i.confidence}%`, 20, y); y += 12;
+      }
+
+      doc.setFontSize(14);
+      doc.text("💡 Recommendation", 20, y);
+      y += 10;
+      doc.setFontSize(12);
+      doc.text(latestData.recommendation, 20, y, { maxWidth: 170 });
+
+      doc.save("Viani_Skin_Report.pdf");
+    });
+  </script>
+</body>
+</html>

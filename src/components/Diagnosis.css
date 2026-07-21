@@ -1,0 +1,144 @@
+/* src/components/Diagnosis.css */
+.diagnosis-container {
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 0 20px;
+}
+
+.diagnosis-form-wrapper {
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.diagnosis-form-wrapper h2 {
+  font-size: 28px;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.dropzone {
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  padding: 40px 20px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  margin-bottom: 25px;
+  background-color: #fafafa;
+  position: relative;
+}
+
+.dropzone.dragging {
+  border-color: #007bff;
+  background-color: #f0f8ff;
+}
+
+.dropzone.has-image {
+  border-style: solid;
+  border-color: #eaeaea;
+  padding: 10px;
+  background: transparent;
+  cursor: default;
+}
+
+.dropzone-placeholder .icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.text-small {
+  font-size: 12px;
+  color: #999;
+  display: block;
+  margin-top: 8px;
+}
+
+.image-preview-container {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.image-preview {
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.btn-remove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.btn-remove:hover {
+  background: rgba(220, 53, 69, 0.9);
+}
+
+.input-group {
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.input-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.input-group textarea {
+  width: 100%;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 15px;
+  resize: vertical;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.input-group textarea:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.btn-large {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.btn-large:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.error-alert {
+  background-color: #fdf3f4;
+  color: #d93025;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  font-weight: 500;
+}

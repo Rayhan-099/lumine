@@ -1,0 +1,84 @@
+.about {
+  padding: 60px 10%;
+  background: #f8fbff;
+  color: #333;
+}
+
+.about-heading {
+  text-align: center;
+  font-size: 40px;
+  color: #1565b5;
+  margin-bottom: 40px;
+}
+
+/* Image + Text Container */
+.about-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 50px;
+  flex-wrap: wrap;
+  margin-bottom: 60px;
+}
+
+/* Text Section */
+.about-text {
+  flex: 1;
+  min-width: 300px;
+}
+
+.about-text p {
+  font-size: 20px;
+  line-height: 1.7;
+  color: #444;
+  margin-bottom: 15px;
+}
+
+/* Image Section */
+.about-image-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.about-image {
+  width: 85%;
+  max-width: 400px;
+  height: 400px;
+  border-radius: 95px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Vision and Mission Section */
+.vision {
+  margin-top: 40px;
+  text-align: center;
+}
+
+.vision h3 {
+  color: #0056b3;
+  margin-top: 30px;
+  font-size: 30px;
+}
+
+.vision p {
+  margin-top: 10px;
+  line-height: 1.7;
+  font-size: 18px;
+  color: #444;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .about-container {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .about-image {
+    width: 70%;
+    margin-top: 20px;
+  }
+}
+

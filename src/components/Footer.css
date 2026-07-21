@@ -1,0 +1,19 @@
+.footer {
+  text-align: center;
+  background-color: #eafaf5;
+  padding: 1.5rem;
+  color: #17252a;
+}
+
+.footer-links {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.footer-links a {
+  text-decoration: none;
+  color: #2b7a78;
+  font-size: 0.9rem;
+}
