@@ -1,4 +1,6 @@
 import os
+import io
+from PIL import Image
 from app.core.config import settings
 from fastapi import UploadFile
 from app.core.logging import logger
@@ -97,13 +99,37 @@ class MLService:
     async def analyze_image(image: UploadFile) -> dict:
         try:
             img_bytes = await image.read()
+            
+            try:
+                # Validate uploaded image, normalize to RGB (removes alpha/transparency), and re-encode to valid JPEG bytes
+                pil_img = Image.open(io.BytesIO(img_bytes))
+                if pil_img.mode != "RGB":
+                    pil_img = pil_img.convert("RGB")
+                    
+                out_bytes = io.BytesIO()
+                pil_img.save(out_bytes, format="JPEG")
+                jpeg_bytes = out_bytes.getvalue()
+            except Exception as e:
+                logger.error(f"Image validation failed: {e}")
+                return {
+                    "predicted_label": "Analysis Unavailable",
+                    "confidence": 0.0,
+                    "status": "error",
+                    "error": "Invalid image format uploaded."
+                }
+            
             # Restoring original intended model for skin diseases
             model_id = os.getenv("HF_IMAGE_MODEL", "Jayanth2002/dinov2-base-finetuned-SkinDisease")
             hf_token = getattr(settings, "HF_TOKEN", os.getenv("HF_TOKEN"))
             
-            client = InferenceClient(model=model_id, token=hf_token)
+            # Fix: Explicitly send Content-Type header so Hugging Face accepts the raw bytes payload
+            client = InferenceClient(
+                model=model_id, 
+                token=hf_token, 
+                headers={"Content-Type": "image/jpeg"}
+            )
             
-            result = client.image_classification(img_bytes)
+            result = client.image_classification(jpeg_bytes)
             
             if isinstance(result, list) and len(result) > 0:
                 # `result` is a list of objects that have `.label` and `.score` properties
