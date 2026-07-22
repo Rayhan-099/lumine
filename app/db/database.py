@@ -6,7 +6,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Use SQLite by default for local, but allow PostgreSQL via env var
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./lumine.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./lumine.db")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+SQLALCHEMY_DATABASE_URL = DATABASE_URL
 
 # SQLite needs check_same_thread=False, PostgreSQL does not
 if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):

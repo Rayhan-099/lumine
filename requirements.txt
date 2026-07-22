@@ -9,3 +9,6 @@ pyjwt
 passlib[bcrypt]
 google-generativeai
 fpdf2
+gunicorn
+alembic
+psycopg2-binary

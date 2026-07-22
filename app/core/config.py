@@ -8,7 +8,6 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "supersecretkey_please_change_in_production")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 1 week
-    SQLALCHEMY_DATABASE_URI: str = "sqlite:///./lumine.db"
     
     # CORS Origins. Accept a string (comma separated) or list.
     CORS_ORIGINS: Union[str, List[str]] = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
