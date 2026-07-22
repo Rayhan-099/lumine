@@ -17,39 +17,48 @@ async def analyze_problem(
     db: Session = Depends(deps.get_db),
     current_user: Optional[User] = Depends(deps.get_optional_current_user)
 ):
-    analysis_result = MLService.analyze_text(description)
-    
     image_prediction = None
+    analysis_result = None
+    status = "error"
+    
     if image:
         if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
-            from fastapi import HTTPException
             raise HTTPException(status_code=400, detail="Invalid image format. Please upload a JPG, PNG, or WEBP file.")
         
-        # Read file to check size
         img_bytes = await image.read()
         if len(img_bytes) > 10 * 1024 * 1024:
-            from fastapi import HTTPException
             raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
         
-        # We need to reset the file pointer or just pass the bytes directly to MLService
         await image.seek(0)
         logger.info(f"User {current_user.id if current_user else 'Anonymous'} initiated image analysis.")
         image_prediction = await MLService.analyze_image(image)
         logger.info(f"Inference complete: {image_prediction}")
         
+        if image_prediction.get("status") == "success":
+            status = "success"
+            analysis_result = MLService.get_condition_details(image_prediction["predicted_label"])
+        else:
+            status = "error"
+            # If inference fails, do not proceed with text fallbacks
+            analysis_result = None
+
     history_context = None
     if current_user:
         past_analyses = db.query(Analysis).filter(Analysis.user_id == current_user.id).order_by(Analysis.timestamp.desc()).limit(5).all()
-        history_context = [{"date": a.timestamp.isoformat(), "condition": a.predicted_class or a.text_condition} for a in past_analyses]
+        history_context = [{"date": a.timestamp.isoformat(), "condition": a.predicted_class} for a in past_analyses if a.predicted_class]
 
-    ai_summary = llm_service.generate_report(image_prediction, analysis_result, user_context=history_context)
+    ai_summary = None
+    if status == "success":
+        ai_summary = llm_service.generate_report(image_prediction, analysis_result, user_context=history_context, user_description=description)
+        if ai_summary.startswith("AI insights are temporarily unavailable"):
+            status = "partial_success"
     
-    # Save to history if logged in
-    if current_user:
+    # Save to history if logged in and ML succeeded
+    if current_user and status in ["success", "partial_success"] and analysis_result:
         analysis_record = Analysis(
             user_id=current_user.id,
-            predicted_class=image_prediction["predicted_label"] if image_prediction else None,
-            confidence=image_prediction["confidence"] if image_prediction else None,
+            predicted_class=image_prediction["predicted_label"],
+            confidence=image_prediction["confidence"],
             text_condition=analysis_result["condition"],
             text_seriousness=analysis_result["seriousness"],
             ai_summary=ai_summary,
@@ -60,14 +69,15 @@ async def analyze_problem(
         
     final_response = {
         "text_analysis": analysis_result,
-        "image_analysis": image_prediction if image_prediction else None,
+        "image_analysis": image_prediction,
         "ai_summary": ai_summary,
         "recommendation": (
             "If symptoms persist or worsen, please consult a certified dermatologist."
-            if analysis_result["seriousness"] in ["medium", "high"]
+            if (analysis_result and analysis_result.get("seriousness") in ["medium", "high"])
             else "Follow home care suggestions and monitor the condition."
-        ),
-        "status": "success"
+        ) if analysis_result else None,
+        "status": status,
+        "user_description": description
     }
 
     return final_response

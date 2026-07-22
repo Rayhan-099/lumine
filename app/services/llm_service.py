@@ -1,16 +1,18 @@
 import os
 import google.generativeai as genai
+from app.core.logging import logger
 
 class LLMService:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY", "")
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
         if self.api_key:
             genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.model = genai.GenerativeModel(self.model_name)
         else:
             self.model = None
 
-    def generate_report(self, prediction: dict, text_analysis: dict, user_context: list = None) -> str:
+    def generate_report(self, prediction: dict, text_analysis: dict, user_context: list = None, user_description: str = "") -> str:
         if not self.model:
             return "AI Insights are currently disabled. Please configure your GEMINI_API_KEY in the .env file."
         
@@ -18,8 +20,9 @@ class LLMService:
         You are Lumine AI, an intelligent, empathetic digital skin health assistant.
         A user has requested an analysis.
         
-        Text Analysis Context: {text_analysis}
-        Image Prediction Context: {prediction}
+        User's provided symptoms/description: {user_description}
+        Model Prediction: {prediction}
+        Condition Details: {text_analysis}
         """
         
         if user_context and len(user_context) > 0:
@@ -36,7 +39,8 @@ class LLMService:
             response = self.model.generate_content(prompt)
             return response.text
         except Exception as e:
-            return f"Could not generate AI report: {str(e)}"
+            logger.error(f"Gemini API Error in generate_report: {e}")
+            return f"AI insights are temporarily unavailable. Your analysis results are unaffected."
             
     def generate_comparison(self, a1_data: dict, a2_data: dict) -> str:
         if not self.model:
@@ -56,6 +60,17 @@ class LLMService:
             response = self.model.generate_content(prompt)
             return response.text
         except Exception as e:
-            return f"Could not generate comparison insight: {str(e)}"
+            logger.error(f"Gemini API Error in generate_comparison: {e}")
+            return "Comparison insights are temporarily unavailable."
+
+    def generate_assistant_response(self, prompt: str) -> str:
+        if not self.model:
+            return "AI Assistant is currently offline. Please configure your GEMINI_API_KEY."
+        try:
+            response = self.model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            logger.error(f"Gemini API Error in generate_assistant_response: {e}")
+            return "I'm sorry, I couldn't process your request right now due to a service interruption."
 
 llm_service = LLMService()

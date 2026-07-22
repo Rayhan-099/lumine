@@ -37,10 +37,7 @@ def ask_assistant(
     """
     
     try:
-        if not llm_service.model:
-            answer = "AI Assistant is currently offline. Please configure your GEMINI_API_KEY."
-        else:
-            answer = llm_service.model.generate_content(prompt).text
+        answer = llm_service.generate_assistant_response(prompt)
     except Exception as e:
         answer = "I'm sorry, I couldn't process your request right now."
         

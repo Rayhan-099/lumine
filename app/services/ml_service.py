@@ -1,52 +1,58 @@
 import requests
-import random
+import os
 from app.core.config import settings
 from fastapi import UploadFile
+from app.core.logging import logger
 
 class MLService:
     @staticmethod
-    def analyze_text(description: str) -> dict:
-        desc_lower = description.lower()
-        if any(word in desc_lower for word in ["acne", "pimple", "zit", "oily skin"]):
+    def get_condition_details(label: str) -> dict:
+        """
+        Returns structured educational details ONLY for valid ML predictions.
+        Does NOT invent predictions from raw user text.
+        """
+        label_lower = label.lower()
+        
+        if "melanoma" in label_lower or "malignant" in label_lower or "carcinoma" in label_lower:
             return {
-                "condition": "Acne",
-                "causes": "Clogged pores and excess oil production.",
-                "suggestion": "Use a mild oil-free cleanser and avoid touching your face.",
-                "seriousness": "low"
-            }
-        elif any(word in desc_lower for word in ["rash", "rashes", "itching", "irritation", "allergy", "red spots"]):
-            return {
-                "condition": "Skin Rash or Allergy",
-                "causes": "Reaction to allergens, heat, or sweat.",
-                "suggestion": "Apply calamine lotion or hydrocortisone cream. Keep area clean.",
-                "seriousness": "medium"
-            }
-        elif any(word in desc_lower for word in ["scar", "mark", "wound", "injury", "cut", "bruise"]):
-            return {
-                "condition": "Skin or Body Scar",
-                "causes": "Post-injury or acne marks on skin/body.",
-                "suggestion": "Use scar-reducing cream and moisturize regularly.",
-                "seriousness": "low"
-            }
-        elif any(word in desc_lower for word in ["burn", "burnt", "blister"]):
-            return {
-                "condition": "Skin Burn",
-                "causes": "Thermal or chemical damage to skin layers.",
-                "suggestion": "Cool the area with water, avoid breaking blisters, and use burn cream.",
+                "condition": label,
+                "causes": "May be related to UV exposure or genetic factors.",
+                "suggestion": "Possible serious lesion. Consult a certified dermatologist immediately.",
                 "seriousness": "high"
             }
-        elif any(word in desc_lower for word in ["dry", "flaky", "rough skin"]):
+        elif "eczema" in label_lower or "dermatitis" in label_lower:
             return {
-                "condition": "Dry Skin",
-                "causes": "Dehydration or lack of moisture.",
-                "suggestion": "Use moisturizer regularly and avoid hot showers.",
+                "condition": label,
+                "causes": "Skin barrier dysfunction, allergens, or irritants.",
+                "suggestion": "Use gentle moisturizers and avoid known triggers.",
+                "seriousness": "medium"
+            }
+        elif "acne" in label_lower or "rosacea" in label_lower:
+            return {
+                "condition": label,
+                "causes": "Clogged pores, excess oil, or bacterial inflammation.",
+                "suggestion": "Cleanse twice daily with a mild cleanser and avoid touching the area.",
                 "seriousness": "low"
+            }
+        elif "fungal" in label_lower or "tinea" in label_lower or "ringworm" in label_lower:
+            return {
+                "condition": label,
+                "causes": "Fungal overgrowth, often in warm or moist areas.",
+                "suggestion": "Keep the area dry and consider over-the-counter antifungal creams.",
+                "seriousness": "medium"
+            }
+        elif "psoriasis" in label_lower:
+            return {
+                "condition": label,
+                "causes": "Autoimmune response accelerating skin cell turnover.",
+                "suggestion": "Moisturize regularly and consult a doctor for flare-ups.",
+                "seriousness": "medium"
             }
         else:
             return {
-                "condition": "Unclear",
-                "causes": "Could not determine based on text alone.",
-                "suggestion": "Consider uploading an image for better detection.",
+                "condition": label,
+                "causes": "Unknown or general skin variation.",
+                "suggestion": "Monitor the condition. Consult a doctor if symptoms worsen.",
                 "seriousness": "unknown"
             }
 
@@ -54,31 +60,35 @@ class MLService:
     async def analyze_image(image: UploadFile) -> dict:
         try:
             img_bytes = await image.read()
-            image_model_url = "https://api-inference.huggingface.co/models/google/vit-base-patch16-224"
+            # Restoring original intended model for skin diseases
+            model_id = os.getenv("HF_IMAGE_MODEL", "dima806/skin-disease-classification")
+            image_model_url = f"https://api-inference.huggingface.co/models/{model_id}"
             headers = {"Authorization": f"Bearer {settings.HF_TOKEN}"}
 
-            response = requests.post(image_model_url, headers=headers, data=img_bytes)
-            print("HF Status:", response.status_code)
-
+            response = requests.post(image_model_url, headers=headers, data=img_bytes, timeout=40)
+            
             if response.status_code == 200:
                 result = response.json()
                 if isinstance(result, list) and len(result) > 0:
                     top = result[0]
                     return {
-                        "predicted_label": top.get("label", "Unknown Object"),
+                        "predicted_label": top.get("label", "Unknown"),
                         "confidence": round(top.get("score", 0) * 100, 2),
-                        "mode": "Hugging Face Model"
+                        "status": "success",
+                        "model_id": model_id
                     }
                 else:
+                    logger.error(f"HF Inference: No valid predictions returned. Response: {result}")
                     raise ValueError("No valid predictions returned from HF model.")
             else:
+                logger.error(f"HF Inference API failed: Status {response.status_code}, Body: {response.text}")
                 raise ConnectionError(f"HF API failed with status {response.status_code}")
 
         except Exception as e:
-            print("⚠️ Hugging Face unavailable, inference failed:", e)
+            logger.error(f"Hugging Face unavailable, inference failed: {str(e)}")
             return {
                 "predicted_label": "Analysis Unavailable",
                 "confidence": 0.0,
-                "mode": "Service Unavailable",
+                "status": "error",
                 "error": "Image inference failed or is currently unavailable."
             }

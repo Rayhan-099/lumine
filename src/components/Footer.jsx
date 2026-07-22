@@ -4,7 +4,7 @@ import "./Footer.css";
 const Footer = () => {
   return (
     <footer className="footer">
-      <p>© 2025 Lumine AI. All Rights Reserved.</p>
+      <p>© {new Date().getFullYear()} Lumine AI. All Rights Reserved.</p>
       <div className="footer-links">
         <a href="#privacy">Privacy Policy</a>
         <a href="#terms">Terms</a>

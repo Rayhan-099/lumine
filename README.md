@@ -39,8 +39,8 @@ Combining the visual diagnostic power of Vision Transformers (Hugging Face CNN i
 *   **Backend:** FastAPI (Python), SQLAlchemy (ORM).
 *   **Database:** SQLite (local development) / PostgreSQL ready via Alembic migrations.
 *   **AI Integration:** 
-    *   Hugging Face Inference API (`google/vit-base-patch16-224`) for image classification.
-    *   Google Generative AI (`gemini-1.5-flash`) for NLP synthesis and conversational memory.
+    *   Hugging Face Inference API (`dima806/skin-disease-classification` or configurable via `HF_IMAGE_MODEL`) for image classification.
+    *   Google Generative AI (configurable via `GEMINI_MODEL`, defaults to `gemini-1.5-flash`) for NLP synthesis and conversational memory.
 
 ---
 
