@@ -36,4 +36,8 @@ def home():
 
 @app.get("/health")
 def health_check():
+    """
+    Render health-check path.
+    Returns HTTP 200 cheaply without invoking Hugging Face or Gemini on every request.
+    """
     return {"status": "ok"}

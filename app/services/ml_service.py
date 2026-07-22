@@ -174,18 +174,22 @@ class MLService:
         }
         
         label_lower = label.lower()
-        metadata = metadata_map.get(label_lower, {
-            "brief_description": "General skin variation.",
-            "general_associations": "Unknown.",
-            "educational_action_level": "monitor_closely"
-        })
-        
-        return {
-            "condition": label, # display name matches the label from the model directly
-            "causes": metadata["general_associations"],
-            "suggestion": metadata["brief_description"],
-            "educational_action_level": metadata["educational_action_level"]
-        }
+        if label_lower in metadata_map:
+            metadata = metadata_map[label_lower]
+            return {
+                "condition": label, # display name matches the label from the model directly
+                "causes": metadata["general_associations"],
+                "suggestion": metadata["brief_description"],
+                "educational_action_level": metadata["educational_action_level"]
+            }
+        else:
+            logger.warning(f"ML Warning: Unknown model label received '{label}' - no educational metadata available.")
+            return {
+                "condition": label,
+                "causes": "Information unavailable.",
+                "suggestion": "Educational information is unavailable for this classification.",
+                "educational_action_level": "unknown"
+            }
 
     @staticmethod
     def check_inference_status():

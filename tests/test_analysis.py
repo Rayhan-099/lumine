@@ -87,3 +87,30 @@ def test_gemini_failure_does_not_destroy_ml_result(mock_generate_report, mock_an
     assert data["image_analysis"]["predicted_label"] == "psoriasis"
     assert data["text_analysis"]["condition"] == "psoriasis"
     assert "unavailable" in data["ai_summary"]
+
+@patch("app.services.ml_service.MLService.analyze_image")
+@patch("app.services.llm_service.LLMService.generate_report")
+def test_unknown_model_label_behavior(mock_generate_report, mock_analyze_image):
+    mock_analyze_image.return_value = {
+        "predicted_label": "totally_new_disease_123",
+        "confidence": 99.0,
+        "status": "success",
+        "model_id": "Jayanth2002/dinov2-base-finetuned-SkinDisease",
+        "top_predictions": [{"label": "totally_new_disease_123", "score": 99.0}],
+        "is_ambiguous": False
+    }
+    mock_generate_report.return_value = "Summary."
+    
+    response = client.post(
+        "/analyze/",
+        data={"description": "My skin is itchy"},
+        files={"image": ("test.jpg", b"fake_image_bytes", "image/jpeg")}
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["image_analysis"]["predicted_label"] == "totally_new_disease_123"
+    assert data["text_analysis"]["condition"] == "totally_new_disease_123"
+    assert data["text_analysis"]["educational_action_level"] == "unknown"
+    assert "unavailable" in data["text_analysis"]["suggestion"]

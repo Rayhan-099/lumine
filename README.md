@@ -39,8 +39,8 @@ Combining the visual diagnostic power of Vision Transformers (Hugging Face CNN i
 *   **Backend:** FastAPI (Python), SQLAlchemy (ORM).
 *   **Database:** SQLite (local development) / PostgreSQL ready via Alembic migrations.
 *   **AI Integration:** 
-    *   Hugging Face Inference API (`dima806/skin-disease-classification` or configurable via `HF_IMAGE_MODEL`) for image classification.
-        *   *Note: If the configured HF model returns a 404, it means free serverless inference is unavailable. You must host it on a Dedicated Inference Endpoint or self-host via transformers.*
+    *   Hugging Face Inference API (`Jayanth2002/dinov2-base-finetuned-SkinDisease` or configurable via `HF_IMAGE_MODEL`) for image classification.
+        *   *Note: If the configured HF model returns a 404, it means free serverless inference is unavailable. (Historically used `dima806/skin-disease-classification` which is deprecated in production).*
     *   Google Generative AI (configurable via `GEMINI_MODEL`, defaults to `gemini-2.5-flash`) for NLP synthesis and conversational memory.
 
 ---

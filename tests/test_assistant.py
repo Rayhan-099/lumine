@@ -72,3 +72,83 @@ def test_assistant_llm_failure_handled_gracefully(mock_generate):
     assert "service interruption" in response.json()["answer"]
     
     app.dependency_overrides.clear()
+
+from app.services.llm_service import llm_service
+from unittest.mock import MagicMock
+
+class MockException(Exception):
+    pass
+
+@patch("time.sleep", return_value=None)
+@patch.object(llm_service, "client")
+def test_gemini_retry_503_success(mock_client, mock_sleep):
+    mock_model = MagicMock()
+    mock_client.models = mock_model
+    
+    success_response = MagicMock()
+    success_response.text = "Success!"
+    
+    mock_model.generate_content.side_effect = [
+        MockException("Service Unavailable: 503"),
+        success_response
+    ]
+    
+    result = llm_service._generate_with_retry("test prompt", "Fallback")
+    
+    assert result == "Success!"
+    assert mock_model.generate_content.call_count == 2
+    mock_sleep.assert_called_once()
+
+@patch("time.sleep", return_value=None)
+@patch.object(llm_service, "client")
+def test_gemini_retry_503_fallback(mock_client, mock_sleep):
+    mock_model = MagicMock()
+    mock_client.models = mock_model
+    
+    mock_model.generate_content.side_effect = [
+        MockException("Service Unavailable: 503"),
+        MockException("Service Unavailable: 503"),
+        MockException("Service Unavailable: 503")
+    ]
+    
+    result = llm_service._generate_with_retry("test prompt", "Fallback")
+    
+    assert result == "Fallback"
+    assert mock_model.generate_content.call_count == 3
+    assert mock_sleep.call_count == 2
+
+@patch("time.sleep", return_value=None)
+@patch.object(llm_service, "client")
+def test_gemini_retry_429_success(mock_client, mock_sleep):
+    mock_model = MagicMock()
+    mock_client.models = mock_model
+    
+    success_response = MagicMock()
+    success_response.text = "Success!"
+    
+    mock_model.generate_content.side_effect = [
+        MockException("Too Many Requests: 429"),
+        success_response
+    ]
+    
+    result = llm_service._generate_with_retry("test prompt", "Fallback")
+    
+    assert result == "Success!"
+    assert mock_model.generate_content.call_count == 2
+    mock_sleep.assert_called_once()
+
+@patch("time.sleep", return_value=None)
+@patch.object(llm_service, "client")
+def test_gemini_no_retry_400(mock_client, mock_sleep):
+    mock_model = MagicMock()
+    mock_client.models = mock_model
+    
+    mock_model.generate_content.side_effect = [
+        MockException("Bad Request: 400")
+    ]
+    
+    result = llm_service._generate_with_retry("test prompt", "Fallback")
+    
+    assert result == "Fallback"
+    assert mock_model.generate_content.call_count == 1
+    mock_sleep.assert_not_called()

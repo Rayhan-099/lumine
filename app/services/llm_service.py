@@ -1,4 +1,6 @@
 import os
+import time
+import random
 from google import genai
 from app.core.logging import logger
 
@@ -26,6 +28,27 @@ class LLMService:
             logger.info("LLM Diagnostics: Gemini inference provider initialized and reachable.")
         except Exception as e:
             logger.error(f"LLM Diagnostics: Gemini model unavailable or initialization failed. Exception: {type(e).__name__} - {str(e)}")
+
+    def _generate_with_retry(self, prompt: str, fallback_message: str) -> str:
+        max_retries = 2
+        base_delay = 1.0
+        
+        for attempt in range(max_retries + 1):
+            try:
+                response = self.client.models.generate_content(model=self.model_name, contents=prompt)
+                return response.text
+            except Exception as e:
+                error_str = str(e)
+                # Check for transient errors: 429 or 5xx
+                if any(code in error_str for code in ["429", "500", "502", "503", "504"]):
+                    if attempt < max_retries:
+                        delay = (base_delay * (2 ** attempt)) + random.uniform(0.1, 0.5)
+                        logger.warning(f"Gemini API transient error detected. Retrying in {delay:.2f}s (Attempt {attempt+1}/{max_retries})")
+                        time.sleep(delay)
+                        continue
+                logger.error(f"Gemini API Error: {error_str}")
+                return fallback_message
+        return fallback_message
 
     def generate_report(self, prediction: dict, text_analysis: dict, user_context: list = None, user_description: str = "") -> str:
         if not self.client:
@@ -59,12 +82,7 @@ class LLMService:
         Remember, you are an informational assistant, not a doctor. Use a calm, premium tone.
         """
         
-        try:
-            response = self.client.models.generate_content(model=self.model_name, contents=prompt)
-            return response.text
-        except Exception as e:
-            logger.error(f"Gemini API Error in generate_report: {e}")
-            return f"AI insights are temporarily unavailable. Your analysis results are unaffected."
+        return self._generate_with_retry(prompt, "AI insights are temporarily unavailable. Your analysis results are unaffected.")
             
     def generate_comparison(self, a1_data: dict, a2_data: dict) -> str:
         if not self.client:
@@ -84,21 +102,11 @@ class LLMService:
         Provide a concise, 2-3 sentence summary comparing the two. Note if the model's visual match confidence seems to be changing. Do not diagnose.
         """
         
-        try:
-            response = self.client.models.generate_content(model=self.model_name, contents=prompt)
-            return response.text
-        except Exception as e:
-            logger.error(f"Gemini API Error in generate_comparison: {e}")
-            return "Comparison insights are temporarily unavailable."
+        return self._generate_with_retry(prompt, "Comparison insights are temporarily unavailable.")
 
     def generate_assistant_response(self, prompt: str) -> str:
         if not self.client:
             return "AI Assistant is currently offline. Please configure your GEMINI_API_KEY."
-        try:
-            response = self.client.models.generate_content(model=self.model_name, contents=prompt)
-            return response.text
-        except Exception as e:
-            logger.error(f"Gemini API Error in generate_assistant_response: {e}")
-            return "I'm sorry, I couldn't process your request right now due to a service interruption."
+        return self._generate_with_retry(prompt, "I'm sorry, I couldn't process your request right now due to a service interruption.")
 
 llm_service = LLMService()
