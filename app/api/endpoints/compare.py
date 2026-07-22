@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.api import deps
 from app.models.analysis import Analysis
 from app.models.user import User
 from app.services.llm_service import llm_service
+from app.core.rate_limit import limiter
 
 router = APIRouter()
 
 @router.get("/")
+@limiter.limit("10/hour")
 def compare_analyses(
+    request: Request,
     id1: int,
     id2: int,
     db: Session = Depends(deps.get_db),

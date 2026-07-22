@@ -3,11 +3,16 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 from app.main import app
 
+app.state.limiter.enabled = False
 client = TestClient(app)
 
+@patch("PIL.Image.open")
 @patch("app.services.ml_service.MLService.analyze_image")
 @patch("app.services.llm_service.LLMService.generate_report")
-def test_successful_inference(mock_generate_report, mock_analyze_image):
+def test_successful_inference(mock_generate_report, mock_analyze_image, mock_image_open):
+    mock_img = MagicMock()
+    mock_img.size = (100, 100)
+    mock_image_open.return_value = mock_img
     # Mocking MLService success
     mock_analyze_image.return_value = {
         "predicted_label": "melanoma",
@@ -36,9 +41,13 @@ def test_successful_inference(mock_generate_report, mock_analyze_image):
     assert data["ai_summary"] == "This looks like a valid model prediction. Please consult a doctor."
     assert "potentially serious condition" in data["recommendation"]
 
+@patch("PIL.Image.open")
 @patch("app.services.ml_service.MLService.analyze_image")
 @patch("app.services.llm_service.LLMService.generate_report")
-def test_inference_failure_no_fake_condition(mock_generate_report, mock_analyze_image):
+def test_inference_failure_no_fake_condition(mock_generate_report, mock_analyze_image, mock_image_open):
+    mock_img = MagicMock()
+    mock_img.size = (100, 100)
+    mock_image_open.return_value = mock_img
     # Mocking MLService failure
     mock_analyze_image.return_value = {
         "predicted_label": "Analysis Unavailable",
@@ -60,9 +69,13 @@ def test_inference_failure_no_fake_condition(mock_generate_report, mock_analyze_
     assert data["recommendation"] is None
     assert data["image_analysis"]["predicted_label"] == "Analysis Unavailable"
 
+@patch("PIL.Image.open")
 @patch("app.services.ml_service.MLService.analyze_image")
 @patch("app.services.llm_service.LLMService.generate_report")
-def test_gemini_failure_does_not_destroy_ml_result(mock_generate_report, mock_analyze_image):
+def test_gemini_failure_does_not_destroy_ml_result(mock_generate_report, mock_analyze_image, mock_image_open):
+    mock_img = MagicMock()
+    mock_img.size = (100, 100)
+    mock_image_open.return_value = mock_img
     mock_analyze_image.return_value = {
         "predicted_label": "psoriasis",
         "confidence": 88.0,
@@ -88,9 +101,13 @@ def test_gemini_failure_does_not_destroy_ml_result(mock_generate_report, mock_an
     assert data["text_analysis"]["condition"] == "psoriasis"
     assert "unavailable" in data["ai_summary"]
 
+@patch("PIL.Image.open")
 @patch("app.services.ml_service.MLService.analyze_image")
 @patch("app.services.llm_service.LLMService.generate_report")
-def test_unknown_model_label_behavior(mock_generate_report, mock_analyze_image):
+def test_unknown_model_label_behavior(mock_generate_report, mock_analyze_image, mock_image_open):
+    mock_img = MagicMock()
+    mock_img.size = (100, 100)
+    mock_image_open.return_value = mock_img
     mock_analyze_image.return_value = {
         "predicted_label": "totally_new_disease_123",
         "confidence": 99.0,

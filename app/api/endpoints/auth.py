@@ -1,5 +1,6 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from app.core.rate_limit import limiter
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.api import deps
@@ -12,12 +13,13 @@ from app.schemas.token import Token
 router = APIRouter()
 
 @router.post("/register", response_model=UserResponse)
-def register(user_in: UserCreate, db: Session = Depends(deps.get_db)):
+@limiter.limit("3/hour")
+def register(request: Request, user_in: UserCreate, db: Session = Depends(deps.get_db)):
     user = db.query(User).filter(User.email == user_in.email).first()
     if user:
         raise HTTPException(
             status_code=400,
-            detail="The user with this email already exists in the system.",
+            detail="Registration failed. Please verify your information or try logging in.",
         )
     try:
         hashed_password = security.get_password_hash(user_in.password)
@@ -35,8 +37,9 @@ def register(user_in: UserCreate, db: Session = Depends(deps.get_db)):
     return user
 
 @router.post("/login", response_model=Token)
+@limiter.limit("5/minute")
 def login(
-    db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
+    request: Request, db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
 ):
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not security.verify_password(form_data.password, user.hashed_password):

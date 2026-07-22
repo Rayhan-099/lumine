@@ -6,7 +6,7 @@ from app.db.database import Base
 from app.api.deps import get_db
 import app.models.user
 from app.core import security
-from main import app
+from app.main import app
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
@@ -34,8 +34,10 @@ def client(setup_database):
         finally:
             db.close()
     app.dependency_overrides[get_db] = override_get_db
+    app.state.limiter.enabled = False
     with TestClient(app) as c:
         yield c
+    app.state.limiter.enabled = True
 
 def test_register_normal(client):
     response = client.post(
@@ -54,7 +56,7 @@ def test_register_duplicate(client):
         json={"email": "test@example.com", "password": "password123", "full_name": "Test User"}
     )
     assert response.status_code == 400
-    assert "already exists" in response.json()["detail"]
+    assert "Registration failed" in response.json()["detail"]
 
 def test_login_correct(client):
     response = client.post(

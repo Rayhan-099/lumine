@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Form, UploadFile, Depends, HTTPException
+from fastapi import APIRouter, Form, UploadFile, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.api import deps
 from app.services.ml_service import MLService
@@ -7,11 +7,28 @@ from app.models.analysis import Analysis
 from app.models.user import User
 from typing import Optional
 from app.core.logging import logger
+from app.core.rate_limit import limiter
+from PIL import Image
+import io
+
+# Prevent decompression bombs (max 20 MP)
+MAX_IMAGE_WIDTH = 8000
+MAX_IMAGE_HEIGHT = 8000
+MAX_IMAGE_PIXELS = 20_000_000
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 router = APIRouter()
 
+def analyze_rate_limit(key: str):
+    # key is either an IP address or a JWT token
+    if len(key) > 50:
+        return "10/hour"
+    return "3/hour"
+
 @router.post("/")
+@limiter.limit(analyze_rate_limit)
 async def analyze_problem(
+    request: Request,
     description: str = Form(...),
     image: UploadFile = None,
     db: Session = Depends(deps.get_db),
@@ -25,9 +42,32 @@ async def analyze_problem(
         if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
             raise HTTPException(status_code=400, detail="Invalid image format. Please upload a JPG, PNG, or WEBP file.")
         
-        img_bytes = await image.read()
-        if len(img_bytes) > 10 * 1024 * 1024:
-            raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+        img_bytes = b""
+        chunk_size = 1024 * 1024 # 1MB
+        while True:
+            chunk = await image.read(chunk_size)
+            if not chunk:
+                break
+            img_bytes += chunk
+            if len(img_bytes) > 10 * 1024 * 1024:
+                raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+        
+        try:
+            pil_img = Image.open(io.BytesIO(img_bytes))
+            width, height = pil_img.size
+            if width > MAX_IMAGE_WIDTH or height > MAX_IMAGE_HEIGHT:
+                raise HTTPException(status_code=422, detail=f"Image dimensions exceed maximum allowed ({MAX_IMAGE_WIDTH}x{MAX_IMAGE_HEIGHT}).")
+            if width * height > MAX_IMAGE_PIXELS:
+                raise HTTPException(status_code=422, detail=f"Image pixel count exceeds maximum allowed ({MAX_IMAGE_PIXELS}).")
+            pil_img.verify()
+        except Image.DecompressionBombWarning:
+            raise HTTPException(status_code=413, detail="Image exceeds maximum allowed resolution.")
+        except Image.DecompressionBombError:
+            raise HTTPException(status_code=413, detail="Image exceeds maximum allowed resolution.")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid or corrupt image file.")
         
         await image.seek(0)
         logger.info(f"User {current_user.id if current_user else 'Anonymous'} initiated image analysis.")

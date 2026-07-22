@@ -1,6 +1,6 @@
 import os
 import tempfile
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from fpdf import FPDF
@@ -27,6 +27,7 @@ class PDFReport(FPDF):
 @router.get("/{analysis_id}/pdf")
 def generate_pdf_report(
     analysis_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
@@ -89,10 +90,10 @@ def generate_pdf_report(
     os.close(fd)
     
     pdf.output(temp_path)
+    background_tasks.add_task(os.unlink, temp_path)
     
     return FileResponse(
         temp_path, 
         media_type="application/pdf", 
-        filename=f"LumineAI_Report_{analysis.timestamp.strftime('%Y%m%d')}.pdf",
-        background=None
+        filename=f"LumineAI_Report_{analysis.timestamp.strftime('%Y%m%d')}.pdf"
     )
