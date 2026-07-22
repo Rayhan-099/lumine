@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>LUMINE AI</h1>
+  <h1>LUMINE</h1>
   <p><strong>AI-Powered Skin Intelligence</strong></p>
   <p>A full-stack platform combining computer vision, longitudinal skin-analysis history, uncertainty-aware ML inference, and generative AI explanations.</p>
   
@@ -24,8 +24,6 @@
 
 ## 📸 Product Showcase
 
-*(Screenshots to be added manually)*
-
 | Home | Analysis |
 | :---: | :---: |
 | <img src="docs/images/lumine-home.png" width="400" alt="Home" /> | <img src="docs/images/lumine-analysis.png" width="400" alt="Analysis" /> |
@@ -36,9 +34,9 @@
 
 ---
 
-## 📖 What is Lumine AI?
+## 📖 What is Lumine?
 
-Lumine AI is an educational platform that allows users to:
+Lumine is an educational platform that allows users to:
 - Upload skin images for analysis
 - Receive AI visual classifications
 - Inspect classification scores and Top-3 model predictions
@@ -252,7 +250,7 @@ Currently, **39 tests pass** ensuring core auth, database integrity, LLM fallbac
 ## 📜 Limitations
 
 > [!CAUTION]
-> - Lumine AI is an **informational and educational system only**. It is **not** a tool for medical diagnosis.
+> - Lumine is an **informational and educational system only**. It is **not** a tool for medical diagnosis.
 > - The current classifier supports 31 closed-set visual classes and has **no explicit Normal/Healthy class**.
 > - Classification scores are not disease probabilities.
 > - Image-only analysis cannot replace clinical examination.
@@ -281,4 +279,4 @@ Currently, **39 tests pass** ensuring core auth, database integrity, LLM fallbac
 
 ## 👨‍💻 Author
 
-**Rayhan**
+**Rayhan Khan**
