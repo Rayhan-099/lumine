@@ -1,8 +1,8 @@
-import requests
 import os
 from app.core.config import settings
 from fastapi import UploadFile
 from app.core.logging import logger
+from huggingface_hub import InferenceClient
 
 class MLService:
     @staticmethod
@@ -57,35 +57,58 @@ class MLService:
             }
 
     @staticmethod
+    def check_inference_status():
+        hf_token = getattr(settings, "HF_TOKEN", os.getenv("HF_TOKEN"))
+        model_id = os.getenv("HF_IMAGE_MODEL", "dima806/skin-disease-classification")
+        
+        logger.info(f"ML Diagnostics: HF token configured: {bool(hf_token)}")
+        logger.info(f"ML Diagnostics: HF inference model: {model_id}")
+        
+        if not hf_token:
+            logger.warning("ML Diagnostics: HF_TOKEN is missing. Image analysis will fail.")
+            return
+
+        try:
+            client = InferenceClient(model=model_id, token=hf_token)
+            # Cannot do a full dummy image ping without an image, but we check init
+            logger.info("ML Diagnostics: HF InferenceClient initialized successfully.")
+        except Exception as e:
+            logger.error(f"ML Diagnostics: Failed to initialize InferenceClient for model {model_id}. Exception: {type(e).__name__} - {str(e)}")
+
+    @staticmethod
     async def analyze_image(image: UploadFile) -> dict:
         try:
             img_bytes = await image.read()
             # Restoring original intended model for skin diseases
             model_id = os.getenv("HF_IMAGE_MODEL", "dima806/skin-disease-classification")
-            image_model_url = f"https://api-inference.huggingface.co/models/{model_id}"
-            headers = {"Authorization": f"Bearer {settings.HF_TOKEN}"}
-
-            response = requests.post(image_model_url, headers=headers, data=img_bytes, timeout=40)
+            hf_token = getattr(settings, "HF_TOKEN", os.getenv("HF_TOKEN"))
             
-            if response.status_code == 200:
-                result = response.json()
-                if isinstance(result, list) and len(result) > 0:
-                    top = result[0]
-                    return {
-                        "predicted_label": top.get("label", "Unknown"),
-                        "confidence": round(top.get("score", 0) * 100, 2),
-                        "status": "success",
-                        "model_id": model_id
-                    }
-                else:
-                    logger.error(f"HF Inference: No valid predictions returned. Response: {result}")
-                    raise ValueError("No valid predictions returned from HF model.")
+            client = InferenceClient(model=model_id, token=hf_token)
+            
+            result = client.image_classification(img_bytes)
+            
+            if isinstance(result, list) and len(result) > 0:
+                # `result` is a list of objects that have `.label` and `.score` properties
+                # But typically `InferenceClient` returns `list[ImageClassificationOutputElement]`
+                top = result[0]
+                label = getattr(top, 'label', None)
+                score = getattr(top, 'score', None)
+                if label is None and isinstance(top, dict):
+                    label = top.get("label", "Unknown")
+                    score = top.get("score", 0)
+
+                return {
+                    "predicted_label": label,
+                    "confidence": round(score * 100, 2),
+                    "status": "success",
+                    "model_id": model_id
+                }
             else:
-                logger.error(f"HF Inference API failed: Status {response.status_code}, Body: {response.text}")
-                raise ConnectionError(f"HF API failed with status {response.status_code}")
+                logger.error(f"HF Inference: No valid predictions returned. Response: {result}")
+                raise ValueError("No valid predictions returned from HF model.")
 
         except Exception as e:
-            logger.error(f"Hugging Face unavailable, inference failed: {str(e)}")
+            logger.error(f"Hugging Face unavailable, inference failed: [{type(e).__name__}] {str(e)}")
             return {
                 "predicted_label": "Analysis Unavailable",
                 "confidence": 0.0,

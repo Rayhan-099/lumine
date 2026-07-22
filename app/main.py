@@ -9,6 +9,17 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
+from app.services.ml_service import MLService
+from app.services.llm_service import llm_service
+from app.core.logging import logger
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Starting up Lumine AI. Running diagnostic checks...")
+    MLService.check_inference_status()
+    llm_service.check_llm_status()
+    logger.info("Startup diagnostic checks complete.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,

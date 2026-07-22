@@ -1,19 +1,34 @@
 import os
-import google.generativeai as genai
+from google import genai
 from app.core.logging import logger
 
 class LLMService:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY", "")
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         if self.api_key:
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel(self.model_name)
+            self.client = genai.Client(api_key=self.api_key)
         else:
-            self.model = None
+            self.client = None
+
+    def check_llm_status(self):
+        if not self.client:
+            logger.warning("LLM Diagnostics: GEMINI_API_KEY is missing. AI insights are disabled.")
+            return
+        
+        logger.info(f"LLM Diagnostics: GEMINI_MODEL configured as '{self.model_name}'")
+        try:
+            # A lightweight initialization test to check if the model is reachable
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents="ping"
+            )
+            logger.info("LLM Diagnostics: Gemini inference provider initialized and reachable.")
+        except Exception as e:
+            logger.error(f"LLM Diagnostics: Gemini model unavailable or initialization failed. Exception: {type(e).__name__} - {str(e)}")
 
     def generate_report(self, prediction: dict, text_analysis: dict, user_context: list = None, user_description: str = "") -> str:
-        if not self.model:
+        if not self.client:
             return "AI Insights are currently disabled. Please configure your GEMINI_API_KEY in the .env file."
         
         prompt = f"""
@@ -36,14 +51,14 @@ class LLMService:
         """
         
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(model=self.model_name, contents=prompt)
             return response.text
         except Exception as e:
             logger.error(f"Gemini API Error in generate_report: {e}")
             return f"AI insights are temporarily unavailable. Your analysis results are unaffected."
             
     def generate_comparison(self, a1_data: dict, a2_data: dict) -> str:
-        if not self.model:
+        if not self.client:
             return "Comparison insights are currently disabled. Please configure your GEMINI_API_KEY."
             
         prompt = f"""
@@ -57,17 +72,17 @@ class LLMService:
         """
         
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(model=self.model_name, contents=prompt)
             return response.text
         except Exception as e:
             logger.error(f"Gemini API Error in generate_comparison: {e}")
             return "Comparison insights are temporarily unavailable."
 
     def generate_assistant_response(self, prompt: str) -> str:
-        if not self.model:
+        if not self.client:
             return "AI Assistant is currently offline. Please configure your GEMINI_API_KEY."
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(model=self.model_name, contents=prompt)
             return response.text
         except Exception as e:
             logger.error(f"Gemini API Error in generate_assistant_response: {e}")

@@ -9,7 +9,8 @@ pyjwt
 bcrypt
 pytest
 httpx
-google-generativeai
+google-genai
+huggingface_hub
 fpdf2
 gunicorn
 alembic
