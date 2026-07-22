@@ -19,7 +19,11 @@ def register(user_in: UserCreate, db: Session = Depends(deps.get_db)):
             status_code=400,
             detail="The user with this email already exists in the system.",
         )
-    hashed_password = security.get_password_hash(user_in.password)
+    try:
+        hashed_password = security.get_password_hash(user_in.password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
     user = User(
         email=user_in.email,
         hashed_password=hashed_password,

@@ -6,7 +6,9 @@ pydantic-settings
 python-dotenv
 sqlalchemy
 pyjwt
-passlib[bcrypt]
+bcrypt
+pytest
+httpx
 google-generativeai
 fpdf2
 gunicorn
