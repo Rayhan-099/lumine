@@ -44,7 +44,10 @@ async def analyze_problem(
 
     history_context = None
     if current_user:
-        past_analyses = db.query(Analysis).filter(Analysis.user_id == current_user.id).order_by(Analysis.timestamp.desc()).limit(5).all()
+        past_analyses = db.query(Analysis).filter(
+            Analysis.user_id == current_user.id,
+            Analysis.confidence > 0
+        ).order_by(Analysis.timestamp.desc()).limit(5).all()
         history_context = [{"date": a.timestamp.isoformat(), "condition": a.predicted_class} for a in past_analyses if a.predicted_class]
 
     ai_summary = None

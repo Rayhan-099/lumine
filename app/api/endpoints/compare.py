@@ -20,6 +20,9 @@ def compare_analyses(
     if not a1 or not a2:
         raise HTTPException(status_code=404, detail="One or both analyses not found")
         
+    if a1.confidence <= 0 or a2.confidence <= 0:
+        raise HTTPException(status_code=400, detail="One or both selected analyses are invalid or incomplete (0% confidence). Cannot compare.")
+        
     # Ensure a1 is the older one
     if a1.timestamp > a2.timestamp:
         a1, a2 = a2, a1

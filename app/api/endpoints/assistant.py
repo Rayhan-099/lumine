@@ -13,7 +13,10 @@ def ask_assistant(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    past_analyses = db.query(Analysis).filter(Analysis.user_id == current_user.id).order_by(Analysis.timestamp.desc()).limit(10).all()
+    past_analyses = db.query(Analysis).filter(
+        Analysis.user_id == current_user.id,
+        Analysis.confidence > 0
+    ).order_by(Analysis.timestamp.desc()).limit(10).all()
     
     history_context = []
     for a in past_analyses:

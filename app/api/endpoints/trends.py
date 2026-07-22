@@ -12,7 +12,10 @@ def get_trends(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    analyses = db.query(Analysis).filter(Analysis.user_id == current_user.id).order_by(Analysis.timestamp.asc()).all()
+    analyses = db.query(Analysis).filter(
+        Analysis.user_id == current_user.id,
+        Analysis.confidence > 0
+    ).order_by(Analysis.timestamp.asc()).all()
     
     total_analyses = len(analyses)
     if total_analyses == 0:
