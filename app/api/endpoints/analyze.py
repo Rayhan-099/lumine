@@ -46,7 +46,7 @@ async def analyze_problem(
     if current_user:
         past_analyses = db.query(Analysis).filter(
             Analysis.user_id == current_user.id,
-            Analysis.confidence > 0
+            Analysis.inference_status == "success"
         ).order_by(Analysis.timestamp.desc()).limit(5).all()
         history_context = [{"date": a.timestamp.isoformat(), "condition": a.predicted_class} for a in past_analyses if a.predicted_class]
 
@@ -63,9 +63,12 @@ async def analyze_problem(
             predicted_class=image_prediction["predicted_label"],
             confidence=image_prediction["confidence"],
             text_condition=analysis_result["condition"],
-            text_seriousness=analysis_result["seriousness"],
+            text_seriousness=analysis_result["educational_action_level"],
             ai_summary=ai_summary,
-            recommendations=analysis_result["suggestion"]
+            recommendations=analysis_result["suggestion"],
+            inference_status="success",
+            model_id=image_prediction.get("model_id"),
+            inference_provider="huggingface_serverless"
         )
         db.add(analysis_record)
         db.commit()
@@ -75,9 +78,9 @@ async def analyze_problem(
         "image_analysis": image_prediction,
         "ai_summary": ai_summary,
         "recommendation": (
-            "If symptoms persist or worsen, please consult a certified dermatologist."
-            if (analysis_result and analysis_result.get("seriousness") in ["medium", "high"])
-            else "Follow home care suggestions and monitor the condition."
+            "This visually matches a potentially serious condition. Please consult a certified dermatologist."
+            if (analysis_result and analysis_result.get("educational_action_level") == "consult_doctor")
+            else "Follow general skincare best practices and monitor."
         ) if analysis_result else None,
         "status": status,
         "user_description": description

@@ -15,7 +15,7 @@ def ask_assistant(
 ):
     past_analyses = db.query(Analysis).filter(
         Analysis.user_id == current_user.id,
-        Analysis.confidence > 0
+        Analysis.inference_status == "success"
     ).order_by(Analysis.timestamp.desc()).limit(10).all()
     
     history_context = []
@@ -31,12 +31,16 @@ def ask_assistant(
     You are Lumine AI, an intelligent, empathetic digital skin health assistant.
     The user is asking you a question about their skin history or general skin health.
     
-    User's Recent History: {history_context}
+    [HISTORY_CONTEXT]: {history_context}
     
     User's Question: "{question}"
     
-    Provide a helpful, conversational answer. Use the historical context if relevant (e.g. "I see you've had Acne in your last 3 scans").
-    CRITICAL RULE: You are an informational assistant, NOT a doctor. You must never provide a definitive medical diagnosis. If the question asks for a diagnosis or the condition sounds serious, tell them to consult a certified dermatologist.
+    CRITICAL RULES:
+    1. You are an informational assistant, NOT a doctor. You must never provide a definitive medical diagnosis. If the question asks for a diagnosis or the condition sounds serious, tell them to consult a certified dermatologist.
+    2. Any history provided in [HISTORY_CONTEXT] represents past AI visual model classifications, NOT medical diagnoses. 
+    3. If referencing history, use phrasing like: "A previous Lumine scan returned [Condition] as its top visual match." Do NOT say "You had [Condition]."
+    
+    Provide a helpful, conversational answer.
     """
     
     try:

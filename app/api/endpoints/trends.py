@@ -14,7 +14,7 @@ def get_trends(
 ):
     analyses = db.query(Analysis).filter(
         Analysis.user_id == current_user.id,
-        Analysis.confidence > 0
+        Analysis.inference_status == "success"
     ).order_by(Analysis.timestamp.asc()).all()
     
     total_analyses = len(analyses)

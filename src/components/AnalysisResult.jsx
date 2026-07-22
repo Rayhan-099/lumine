@@ -27,10 +27,15 @@ const AnalysisResult = ({ result, imagePreview, onReset }) => {
             {result.image_analysis && (
               <div className="result-card ai-card">
                 <h3>Visual Match</h3>
+                {result.image_analysis.is_ambiguous && (
+                  <p style={{ fontSize: '0.85rem', color: '#ffb347', marginBottom: '10px' }}>
+                    The model did not identify a clearly dominant visual match.
+                  </p>
+                )}
                 <div className="match-info">
                   <span className="label-badge">{result.image_analysis.predicted_label}</span>
                   <div className="confidence-wrapper">
-                    <span className="confidence-text">{result.image_analysis.confidence}% Confidence</span>
+                    <span className="confidence-text">{result.image_analysis.confidence}% Classification Score</span>
                     <div className="confidence-bar">
                       <div 
                         className="confidence-fill" 
@@ -39,14 +44,24 @@ const AnalysisResult = ({ result, imagePreview, onReset }) => {
                     </div>
                   </div>
                 </div>
+                {result.image_analysis.top_predictions && result.image_analysis.top_predictions.length > 1 && (
+                  <details style={{ marginTop: '15px', fontSize: '0.9rem', cursor: 'pointer' }}>
+                    <summary>View model details</summary>
+                    <ul style={{ marginTop: '10px', paddingLeft: '20px', color: '#ccc' }}>
+                      {result.image_analysis.top_predictions.map((p, i) => (
+                        <li key={i}>{p.label}: {p.score}%</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
               </div>
             )}
 
             {result.text_analysis && (
               <div className="result-card text-card">
                 <h3>Symptom Analysis</h3>
-                <p><strong>Detected Condition:</strong> {result.text_analysis.condition}</p>
-                <p><strong>Possible Causes:</strong> {result.text_analysis.causes}</p>
+                <p><strong>AI Visual Match:</strong> {result.text_analysis.condition}</p>
+                <p><strong>Associated Factors:</strong> {result.text_analysis.causes}</p>
               </div>
             )}
           </div>

@@ -37,7 +37,8 @@ def setup_database():
         predicted_class="Melanoma",
         confidence=95.5,
         text_condition="Melanoma",
-        text_seriousness="high",
+        text_seriousness="consult_doctor",
+        inference_status="success",
         timestamp=datetime.now()
     )
     db.add(valid_analysis)
@@ -49,6 +50,7 @@ def setup_database():
         confidence=0.0,
         text_condition="Skin Rash or Allergy",
         text_seriousness="unknown",
+        inference_status="legacy_unverified",
         timestamp=datetime.now()
     )
     db.add(fake_analysis)
@@ -92,7 +94,7 @@ def test_trends_ignores_zero_confidence(client):
     assert "Skin Rash or Allergy" not in conditions
 
 @patch("app.services.llm_service.LLMService.generate_assistant_response")
-def test_assistant_ignores_zero_confidence(mock_generate, client):
+def test_assistant_ignores_invalid_inferences(mock_generate, client):
     # Mocking LLM so it doesn't make external call
     mock_generate.return_value = "Assistant Response"
     

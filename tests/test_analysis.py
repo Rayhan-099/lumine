@@ -10,10 +10,12 @@ client = TestClient(app)
 def test_successful_inference(mock_generate_report, mock_analyze_image):
     # Mocking MLService success
     mock_analyze_image.return_value = {
-        "predicted_label": "Melanoma",
+        "predicted_label": "melanoma",
         "confidence": 95.5,
         "status": "success",
-        "model_id": "dima806/skin-disease-classification"
+        "model_id": "Jayanth2002/dinov2-base-finetuned-SkinDisease",
+        "top_predictions": [{"label": "melanoma", "score": 95.5}, {"label": "nevus", "score": 2.0}],
+        "is_ambiguous": False
     }
     
     # Mocking LLM success
@@ -28,11 +30,11 @@ def test_successful_inference(mock_generate_report, mock_analyze_image):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
-    assert data["image_analysis"]["predicted_label"] == "Melanoma"
-    assert data["text_analysis"]["condition"] == "Melanoma"
-    assert data["text_analysis"]["seriousness"] == "high"
+    assert data["image_analysis"]["predicted_label"] == "melanoma"
+    assert data["text_analysis"]["condition"] == "melanoma"
+    assert data["text_analysis"]["educational_action_level"] == "consult_doctor"
     assert data["ai_summary"] == "This looks like a valid model prediction. Please consult a doctor."
-    assert "certified dermatologist" in data["recommendation"]
+    assert "potentially serious condition" in data["recommendation"]
 
 @patch("app.services.ml_service.MLService.analyze_image")
 @patch("app.services.llm_service.LLMService.generate_report")
@@ -62,10 +64,12 @@ def test_inference_failure_no_fake_condition(mock_generate_report, mock_analyze_
 @patch("app.services.llm_service.LLMService.generate_report")
 def test_gemini_failure_does_not_destroy_ml_result(mock_generate_report, mock_analyze_image):
     mock_analyze_image.return_value = {
-        "predicted_label": "Eczema",
+        "predicted_label": "psoriasis",
         "confidence": 88.0,
         "status": "success",
-        "model_id": "dima806/skin-disease-classification"
+        "model_id": "Jayanth2002/dinov2-base-finetuned-SkinDisease",
+        "top_predictions": [{"label": "psoriasis", "score": 88.0}],
+        "is_ambiguous": False
     }
     
     # Mocking LLM failure response string
@@ -80,6 +84,6 @@ def test_gemini_failure_does_not_destroy_ml_result(mock_generate_report, mock_an
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "partial_success"
-    assert data["image_analysis"]["predicted_label"] == "Eczema"
-    assert data["text_analysis"]["condition"] == "Eczema"
+    assert data["image_analysis"]["predicted_label"] == "psoriasis"
+    assert data["text_analysis"]["condition"] == "psoriasis"
     assert "unavailable" in data["ai_summary"]

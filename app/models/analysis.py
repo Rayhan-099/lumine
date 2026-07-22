@@ -16,4 +16,10 @@ class Analysis(Base):
     ai_summary = Column(String, nullable=True)
     recommendations = Column(String, nullable=True)
     
+    # Provenance fields
+    inference_status = Column(String, nullable=False, default="legacy_unverified")
+    model_id = Column(String, nullable=True)
+    inference_provider = Column(String, nullable=True)
+    model_version = Column(String, nullable=True)
+    
     user = relationship("User", backref="analyses")

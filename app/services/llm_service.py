@@ -33,20 +33,29 @@ class LLMService:
         
         prompt = f"""
         You are Lumine AI, an intelligent, empathetic digital skin health assistant.
-        A user has requested an analysis.
+        A user has requested an analysis. 
         
-        User's provided symptoms/description: {user_description}
-        Model Prediction: {prediction}
-        Condition Details: {text_analysis}
+        Please interpret the following structured data.
+        
+        [MODEL_VISUAL_CLASSIFICATION]: {prediction.get("predicted_label", "Unknown")}
+        [MODEL_SCORE]: {prediction.get("confidence", "Unknown")}%
+        [USER_REPORTED_SYMPTOMS]: {user_description if user_description else "None provided"}
+        [EDUCATIONAL_METADATA]: {text_analysis}
         """
         
         if user_context and len(user_context) > 0:
-            prompt += f"\nHistorical Scan Context (last 5 scans): {user_context}\n"
-            prompt += "Acknowledge their history (e.g., 'This is the 2nd time we've seen this') if relevant, but do not invent trends."
-            
+            prompt += f"\n[HISTORY_CONTEXT] (last 5 scans): {user_context}\n"
+        
         prompt += """
-        Provide a short (3-4 sentences) explanation of what these results might mean, 
-        and give 2 practical skincare tips. 
+        CRITICAL RULES:
+        1. NEVER claim the user reported something that is absent from [USER_REPORTED_SYMPTOMS]. If it says "None provided", do not invent symptoms like redness or itching.
+        2. NEVER convert the model classification into a definitive medical diagnosis. Use wording like "The model's top visual match is..." or "This visually aligns with...".
+        3. NEVER interpret the [MODEL_SCORE] as a probability that the user actually has the disease. It is just the model's visual confidence score.
+        4. Distinguish clearly between what the model detected and what the user reported.
+        5. If history is provided, describe it as past model classifications (e.g., "A previous scan returned X as its top visual match"), never as past medical diagnoses.
+
+        Provide a short (3-4 sentences) explanation of what these results might mean educationally, 
+        and give 2 practical skincare tips based on the [EDUCATIONAL_METADATA]. 
         Remember, you are an informational assistant, not a doctor. Use a calm, premium tone.
         """
         
@@ -68,7 +77,11 @@ class LLMService:
         Analysis 1 (Older): {a1_data}
         Analysis 2 (Newer): {a2_data}
         
-        Provide a concise, 2-3 sentence summary comparing the two. Note if the condition seems to be changing, improving, or remaining the same based purely on the provided data. Do not diagnose.
+        CRITICAL RULES:
+        1. NEVER convert the model classifications into a definitive medical diagnosis.
+        2. These are visual classification scores, NOT medical diagnoses. 
+        
+        Provide a concise, 2-3 sentence summary comparing the two. Note if the model's visual match confidence seems to be changing. Do not diagnose.
         """
         
         try:
