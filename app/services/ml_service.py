@@ -13,20 +13,25 @@ class MLService:
         """
         label_lower = label.lower()
         
-        if "melanoma" in label_lower or "malignant" in label_lower or "carcinoma" in label_lower:
+        # High seriousness / Cancerous
+        if any(term in label_lower for term in ["melanoma", "carcinoma"]):
             return {
                 "condition": label,
                 "causes": "May be related to UV exposure or genetic factors.",
                 "suggestion": "Possible serious lesion. Consult a certified dermatologist immediately.",
                 "seriousness": "high"
             }
-        elif "eczema" in label_lower or "dermatitis" in label_lower:
+            
+        # Inflammatory / Autoimmune / Eczema / Psoriasis
+        elif any(term in label_lower for term in ["eczema", "dermatitis", "psoriasis", "lupus", "lichen", "darier"]):
             return {
                 "condition": label,
-                "causes": "Skin barrier dysfunction, allergens, or irritants.",
-                "suggestion": "Use gentle moisturizers and avoid known triggers.",
+                "causes": "Skin barrier dysfunction, autoimmune response, or irritants.",
+                "suggestion": "Moisturize regularly and consult a doctor for flare-ups.",
                 "seriousness": "medium"
             }
+            
+        # Acne / Rosacea
         elif "acne" in label_lower or "rosacea" in label_lower:
             return {
                 "condition": label,
@@ -34,20 +39,33 @@ class MLService:
                 "suggestion": "Cleanse twice daily with a mild cleanser and avoid touching the area.",
                 "seriousness": "low"
             }
-        elif "fungal" in label_lower or "tinea" in label_lower or "ringworm" in label_lower:
+            
+        # Infections (Fungal, Bacterial, Viral, Parasitic)
+        elif any(term in label_lower for term in ["tinea", "fungal", "ringworm", "herpes", "impetigo", "leprosy", "pediculosis", "larva", "tungiasis", "molluscum"]):
             return {
                 "condition": label,
-                "causes": "Fungal overgrowth, often in warm or moist areas.",
-                "suggestion": "Keep the area dry and consider over-the-counter antifungal creams.",
+                "causes": "Infection by fungus, bacteria, virus, or parasite.",
+                "suggestion": "Maintain hygiene and consult a doctor for appropriate antimicrobial treatment.",
                 "seriousness": "medium"
             }
-        elif "psoriasis" in label_lower:
+            
+        # Benign Lesions (Keratosis, Nevus, Dermatofibroma, etc.)
+        elif any(term in label_lower for term in ["keratosis", "nevus", "dermatofibroma", "vascular lesion", "papilomatosis"]):
+            # Actinic keratosis is precancerous, bump seriousness
+            if "actinic" in label_lower:
+                return {
+                    "condition": label,
+                    "causes": "Precancerous growth caused by sun damage.",
+                    "suggestion": "Monitor closely and consult a dermatologist for removal options.",
+                    "seriousness": "medium"
+                }
             return {
                 "condition": label,
-                "causes": "Autoimmune response accelerating skin cell turnover.",
-                "suggestion": "Moisturize regularly and consult a doctor for flare-ups.",
-                "seriousness": "medium"
+                "causes": "Often a harmless benign growth or pigmentation.",
+                "suggestion": "Monitor the condition for any changes in size, shape, or color.",
+                "seriousness": "low"
             }
+            
         else:
             return {
                 "condition": label,
@@ -59,7 +77,7 @@ class MLService:
     @staticmethod
     def check_inference_status():
         hf_token = getattr(settings, "HF_TOKEN", os.getenv("HF_TOKEN"))
-        model_id = os.getenv("HF_IMAGE_MODEL", "dima806/skin-disease-classification")
+        model_id = os.getenv("HF_IMAGE_MODEL", "Jayanth2002/dinov2-base-finetuned-SkinDisease")
         
         logger.info(f"ML Diagnostics: HF token configured: {bool(hf_token)}")
         logger.info(f"ML Diagnostics: HF inference model: {model_id}")
@@ -80,7 +98,7 @@ class MLService:
         try:
             img_bytes = await image.read()
             # Restoring original intended model for skin diseases
-            model_id = os.getenv("HF_IMAGE_MODEL", "dima806/skin-disease-classification")
+            model_id = os.getenv("HF_IMAGE_MODEL", "Jayanth2002/dinov2-base-finetuned-SkinDisease")
             hf_token = getattr(settings, "HF_TOKEN", os.getenv("HF_TOKEN"))
             
             client = InferenceClient(model=model_id, token=hf_token)
