@@ -16,6 +16,12 @@ def ask_assistant(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
+    import re
+    
+    clean_q = re.sub(r'[^\w\s]', '', question.strip().lower())
+    if clean_q in ["hi", "hello", "hey"]:
+        return {"answer": "Hi! I'm Lumine AI. I can help explain your previous Lumine analyses and answer general educational questions about skin health. What would you like to know?"}
+
     past_analyses = db.query(Analysis).filter(
         Analysis.user_id == current_user.id,
         Analysis.inference_status == "success"

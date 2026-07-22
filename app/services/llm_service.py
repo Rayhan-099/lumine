@@ -20,16 +20,16 @@ class LLMService:
         
         logger.info(f"LLM Diagnostics: GEMINI_MODEL configured as '{self.model_name}'")
         try:
-            # A lightweight initialization test to check if the model is reachable
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents="ping"
-            )
-            logger.info("LLM Diagnostics: Gemini inference provider initialized and reachable.")
+            # Avoid generate_content to save quota on startup
+            model_info = self.client.models.get(model=self.model_name)
+            logger.info(f"LLM Diagnostics: Gemini inference provider initialized. Model '{model_info.name}' is reachable.")
         except Exception as e:
             logger.error(f"LLM Diagnostics: Gemini model unavailable or initialization failed. Exception: {type(e).__name__} - {str(e)}")
 
-    def _generate_with_retry(self, prompt: str, fallback_message: str, component: str = "LLMService") -> str:
+    def _generate_with_retry(self, prompt: str, fallback_message: str, component: str = "LLMService", quota_fallback_message: str = None) -> str:
+        if quota_fallback_message is None:
+            quota_fallback_message = fallback_message
+            
         max_retries = 2
         base_delay = 1.0
         
@@ -57,6 +57,16 @@ class LLMService:
             except Exception as e:
                 error_str = str(e)
                 error_type = type(e).__name__
+                
+                # Check for hard quota
+                hard_quota_indicators = [
+                    "RESOURCE_EXHAUSTED", "QuotaFailure", "GenerateRequestsPerDayPerProjectPerModel-FreeTier", 
+                    "quota exhausted", "quota limit reached"
+                ]
+                if any(ind.lower() in error_str.lower() for ind in hard_quota_indicators):
+                    logger.error(f"[{component}] Hard Quota Exhausted ({error_type}): {error_str} [Model: {self.model_name}]")
+                    return quota_fallback_message
+                    
                 # Check for transient errors: 429 or 5xx
                 if any(code in error_str for code in ["429", "500", "502", "503", "504"]):
                     if attempt < max_retries:
@@ -100,7 +110,12 @@ class LLMService:
         Remember, you are an informational assistant, not a doctor. Use a calm, premium tone.
         """
         
-        return self._generate_with_retry(prompt, "AI insights are temporarily unavailable. Your analysis results are unaffected.", component="ReportGeneration")
+        return self._generate_with_retry(
+            prompt, 
+            fallback_message="AI insights are temporarily unavailable. Your analysis results are unaffected.", 
+            component="ReportGeneration",
+            quota_fallback_message="AI-generated insights are temporarily unavailable. Your visual analysis results are still available above."
+        )
             
     def generate_comparison(self, a1_data: dict, a2_data: dict) -> str:
         if not self.client:
@@ -125,6 +140,11 @@ class LLMService:
     def generate_assistant_response(self, prompt: str) -> str:
         if not self.client:
             return "AI Assistant is currently offline. Please configure your GEMINI_API_KEY."
-        return self._generate_with_retry(prompt, "The AI assistant is temporarily busy. Please try again in a moment.", component="Assistant")
+        return self._generate_with_retry(
+            prompt, 
+            fallback_message="The AI assistant is temporarily busy. Please try again in a moment.", 
+            component="Assistant",
+            quota_fallback_message="Lumine AI Assistant has reached its temporary AI usage limit. Please try again later."
+        )
 
 llm_service = LLMService()
