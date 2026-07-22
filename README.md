@@ -28,15 +28,11 @@
 
 | Home | Analysis |
 | :---: | :---: |
-| `docs/images/lumine-home.webp` | `docs/images/lumine-analysis.webp` |
+| <img src="docs/images/lumine-home.png" width="400" alt="Home" /> | <img src="docs/images/lumine-analysis.png" width="400" alt="Analysis" /> |
 
 | Dashboard | History |
 | :---: | :---: |
-| `docs/images/lumine-dashboard.webp` | `docs/images/lumine-history.webp` |
-
-| Trends | Assistant |
-| :---: | :---: |
-| `docs/images/lumine-trends.webp` | `docs/images/lumine-assistant.webp` |
+| <img src="docs/images/lumine-dashboard.png" width="400" alt="Dashboard" /> | <img src="docs/images/lumine-history.png" width="400" alt="History" /> |
 
 ---
 

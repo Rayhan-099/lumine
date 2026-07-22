@@ -152,3 +152,61 @@ def test_gemini_no_retry_400(mock_client, mock_sleep):
     assert result == "Fallback"
     assert mock_model.generate_content.call_count == 1
     mock_sleep.assert_not_called()
+
+@patch("time.sleep", return_value=None)
+@patch.object(llm_service, "client")
+def test_gemini_empty_text_fallback(mock_client, mock_sleep):
+    mock_model = MagicMock()
+    mock_client.models = mock_model
+    
+    success_response = MagicMock()
+    success_response.text = ""
+    
+    mock_model.generate_content.side_effect = [
+        success_response,
+        success_response,
+        success_response
+    ]
+    
+    result = llm_service._generate_with_retry("test prompt", "Fallback")
+    
+    assert result == "Fallback"
+    assert mock_model.generate_content.call_count == 3
+    assert mock_sleep.call_count == 0  # no transient sleep for missing text
+
+@patch("app.services.llm_service.LLMService.generate_assistant_response")
+def test_assistant_zero_history(mock_generate):
+    class MockUser:
+        id = 1
+        email = "test@example.com"
+    
+    def override_get_current_user():
+        return MockUser()
+    
+    mock_generate.return_value = "Hello! I am Lumine AI."
+    
+    from app.api.deps import get_db, get_current_user
+    from unittest.mock import MagicMock
+
+    def override_get_db():
+        mock_db = MagicMock()
+        mock_db.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = []
+        yield mock_db
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+    response = client.post(
+        "/assistant/ask",
+        json={"question": "hi"}
+    )
+    
+    assert response.status_code == 200
+    assert response.json()["answer"] == "Hello! I am Lumine AI."
+    
+    # Verify the prompt contained the zero history string
+    args, kwargs = mock_generate.call_args
+    assert "No verified previous skin analyses are available for this user." in args[0]
+    
+    app.dependency_overrides.clear()
+

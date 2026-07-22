@@ -21,20 +21,24 @@ def ask_assistant(
         Analysis.inference_status == "success"
     ).order_by(Analysis.timestamp.desc()).limit(10).all()
     
-    history_context = []
-    for a in past_analyses:
-        history_context.append({
-            "Date": a.timestamp.isoformat(),
-            "Condition": a.text_condition,
-            "Prediction": a.predicted_class,
-            "Confidence": a.confidence
-        })
+    if not past_analyses:
+        history_context_str = "No verified previous skin analyses are available for this user."
+    else:
+        history_context = []
+        for a in past_analyses:
+            history_context.append({
+                "Date": a.timestamp.isoformat(),
+                "Condition": a.text_condition,
+                "Prediction": a.predicted_class,
+                "Confidence": a.confidence
+            })
+        history_context_str = str(history_context)
         
     prompt = f"""
     You are Lumine AI, an intelligent, empathetic digital skin health assistant.
     The user is asking you a question about their skin history or general skin health.
     
-    [HISTORY_CONTEXT]: {history_context}
+    [HISTORY_CONTEXT]: {history_context_str}
     
     CRITICAL RULES:
     1. You are an informational assistant, NOT a doctor. You must never provide a definitive medical diagnosis. If the question asks for a diagnosis or the condition sounds serious, tell them to consult a certified dermatologist.
@@ -52,6 +56,8 @@ def ask_assistant(
     try:
         answer = llm_service.generate_assistant_response(prompt)
     except Exception as e:
-        answer = "I'm sorry, I couldn't process your request right now."
+        from app.core.logging import logger
+        logger.error(f"[AssistantRoute] Unexpected error during assistant response: {type(e).__name__} - {str(e)}")
+        answer = "Lumine AI Assistant is temporarily unavailable. Please try again shortly."
         
     return {"answer": answer}

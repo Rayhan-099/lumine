@@ -29,24 +29,42 @@ class LLMService:
         except Exception as e:
             logger.error(f"LLM Diagnostics: Gemini model unavailable or initialization failed. Exception: {type(e).__name__} - {str(e)}")
 
-    def _generate_with_retry(self, prompt: str, fallback_message: str) -> str:
+    def _generate_with_retry(self, prompt: str, fallback_message: str, component: str = "LLMService") -> str:
         max_retries = 2
         base_delay = 1.0
         
         for attempt in range(max_retries + 1):
             try:
                 response = self.client.models.generate_content(model=self.model_name, contents=prompt)
-                return response.text
+                
+                # Safe response parsing
+                if not response:
+                    logger.error(f"[{component}] Attempt {attempt+1}/{max_retries+1}: Empty response object from Gemini.")
+                    if attempt == max_retries: return fallback_message
+                    continue
+                    
+                # Handle google-genai response structure safely
+                try:
+                    text = response.text
+                    if text:
+                        return text
+                    logger.error(f"[{component}] Attempt {attempt+1}/{max_retries+1}: Gemini returned a response but response.text is empty.")
+                    if attempt == max_retries: return fallback_message
+                except Exception as parse_e:
+                    logger.error(f"[{component}] Attempt {attempt+1}/{max_retries+1}: Failed to extract text from response. {type(parse_e).__name__}: {str(parse_e)}")
+                    if attempt == max_retries: return fallback_message
+                    
             except Exception as e:
                 error_str = str(e)
+                error_type = type(e).__name__
                 # Check for transient errors: 429 or 5xx
                 if any(code in error_str for code in ["429", "500", "502", "503", "504"]):
                     if attempt < max_retries:
                         delay = (base_delay * (2 ** attempt)) + random.uniform(0.1, 0.5)
-                        logger.warning(f"Gemini API transient error detected. Retrying in {delay:.2f}s (Attempt {attempt+1}/{max_retries})")
+                        logger.warning(f"[{component}] Transient error ({error_type}). Retrying in {delay:.2f}s (Attempt {attempt+1}/{max_retries})")
                         time.sleep(delay)
                         continue
-                logger.error(f"Gemini API Error: {error_str}")
+                logger.error(f"[{component}] Permanent API Error ({error_type}): {error_str} [Model: {self.model_name}]")
                 return fallback_message
         return fallback_message
 
@@ -82,7 +100,7 @@ class LLMService:
         Remember, you are an informational assistant, not a doctor. Use a calm, premium tone.
         """
         
-        return self._generate_with_retry(prompt, "AI insights are temporarily unavailable. Your analysis results are unaffected.")
+        return self._generate_with_retry(prompt, "AI insights are temporarily unavailable. Your analysis results are unaffected.", component="ReportGeneration")
             
     def generate_comparison(self, a1_data: dict, a2_data: dict) -> str:
         if not self.client:
@@ -102,11 +120,11 @@ class LLMService:
         Provide a concise, 2-3 sentence summary comparing the two. Note if the model's visual match confidence seems to be changing. Do not diagnose.
         """
         
-        return self._generate_with_retry(prompt, "Comparison insights are temporarily unavailable.")
+        return self._generate_with_retry(prompt, "Comparison insights are temporarily unavailable.", component="CompareGeneration")
 
     def generate_assistant_response(self, prompt: str) -> str:
         if not self.client:
             return "AI Assistant is currently offline. Please configure your GEMINI_API_KEY."
-        return self._generate_with_retry(prompt, "I'm sorry, I couldn't process your request right now due to a service interruption.")
+        return self._generate_with_retry(prompt, "The AI assistant is temporarily busy. Please try again in a moment.", component="Assistant")
 
 llm_service = LLMService()

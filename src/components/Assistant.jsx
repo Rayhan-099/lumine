@@ -34,11 +34,15 @@ const Assistant = () => {
       
       if (response.ok) {
         setMessages((prev) => [...prev, { sender: "ai", text: data.answer }]);
+      } else if (response.status === 429) {
+        setMessages((prev) => [...prev, { sender: "ai", text: "You're sending messages too quickly. Please try again shortly." }]);
+      } else if (response.status === 401) {
+        setMessages((prev) => [...prev, { sender: "ai", text: "Your session has expired. Please sign in again." }]);
       } else {
-        setMessages((prev) => [...prev, { sender: "ai", text: "I'm sorry, I encountered an error." }]);
+        setMessages((prev) => [...prev, { sender: "ai", text: "Lumine AI Assistant is temporarily unavailable. Please try again shortly." }]);
       }
     } catch (err) {
-      setMessages((prev) => [...prev, { sender: "ai", text: "I'm having trouble connecting to the server." }]);
+      setMessages((prev) => [...prev, { sender: "ai", text: "Lumine AI Assistant is temporarily unavailable. Please try again shortly." }]);
     } finally {
       setLoading(false);
     }
