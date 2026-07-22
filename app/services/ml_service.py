@@ -75,17 +75,10 @@ class MLService:
                 raise ConnectionError(f"HF API failed with status {response.status_code}")
 
         except Exception as e:
-            print("⚠️ Hugging Face unavailable, switching to fallback mode:", e)
-            fallback_labels = [
-                {"label": "Acne", "confidence": random.uniform(80, 95)},
-                {"label": "Skin Rash", "confidence": random.uniform(75, 90)},
-                {"label": "Scar", "confidence": random.uniform(78, 93)},
-                {"label": "Burn", "confidence": random.uniform(82, 96)},
-                {"label": "Dry Skin", "confidence": random.uniform(70, 88)},
-            ]
-            chosen = random.choice(fallback_labels)
+            print("⚠️ Hugging Face unavailable, inference failed:", e)
             return {
-                "predicted_label": chosen["label"],
-                "confidence": round(chosen["confidence"], 2),
-                "mode": "Offline Fallback (Demo)"
+                "predicted_label": "Analysis Unavailable",
+                "confidence": 0.0,
+                "mode": "Service Unavailable",
+                "error": "Image inference failed or is currently unavailable."
             }
